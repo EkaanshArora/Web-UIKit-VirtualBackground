@@ -1,58 +1,49 @@
 import VirtualBackgroundExtension, { IVirtualBackgroundProcessor } from "agora-extension-virtual-background";
 import AgoraRTC from 'agora-rtc-sdk-ng';
 import { TracksContext } from 'agora-react-uikit';
-import { useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { useContext, useEffect, useState, useRef } from 'react';
 
 const VirtualBackground = () => {
-  const [isStreaming, setStreaming] = useState(false);
-  const [isBtnDisabled, setBtnDisabled] = useState(false)
+  const [extensionActive, setExtensionActive] = useState(false);
   const { localVideoTrack } = useContext(TracksContext)
   const ext = useRef(new VirtualBackgroundExtension())
   const processor = useRef<IVirtualBackgroundProcessor>();
 
   useEffect(() => {
-    const func = async () => {
+    const initExtension = async () => {
       AgoraRTC.registerExtensions([ext.current]);
       processor.current = ext.current.createProcessor()
       await processor.current.init('https://ekaansharora.github.io/test-wasm-host/')
     }
-    func()
+    initExtension()
   }, [])
 
   const enableBackground = async () => {
     if (processor.current && localVideoTrack) {
-      setBtnDisabled(true)
       localVideoTrack.pipe(processor.current).pipe(localVideoTrack.processorDestination);
       processor.current.setOptions({ type: 'color', color: '#ff00ff' });
       await processor.current.enable();
-      setStreaming(true)
-      setBtnDisabled(false)
+      setExtensionActive(true)
     }
   }
 
   const disableBackground = async () => {
-    if (processor.current) {
-      setBtnDisabled(true)
-      localVideoTrack?.unpipe()
+    if (processor.current && localVideoTrack) {
+      localVideoTrack.unpipe()
       await processor.current.disable()
-      setStreaming(false)
-      setBtnDisabled(false)
+      setExtensionActive(false)
     }
   }
 
   return (
-    <div style={isBtnDisabled ? disabledBtn : btn} onClick={() => {
-      if (!isBtnDisabled) {
-        console.log(isStreaming)
-        isStreaming ? disableBackground() : enableBackground()
-      }
+    <div style={btn} onClick={() => {
+        extensionActive ? disableBackground() : enableBackground()
     }}>
-      {isBtnDisabled ? 'Working...' : isStreaming ? 'Disable Virtual Background' : 'Enable Virtual Background'}
+      {extensionActive ? 'Disable Virtual Background' : 'Enable Virtual Background'}
     </div>
   )
 }
 
-const btn = { backgroundColor: '#007bff', cursor: 'pointer', borderRadius: 5, padding: 5, color: '#ffffff', fontSize: 20, margin: 'auto', paddingLeft: 10, paddingRight: 10 }
-const disabledBtn = { backgroundColor: '#007bff55', borderRadius: 5, padding: 5, color: '#ffffff', fontSize: 20, margin: 'auto', paddingLeft: 20, paddingRight: 20 }
+const btn = { backgroundColor: '#007bff', cursor: 'pointer', borderRadius: 5, padding: 5, color: '#ffffff', fontSize: 16, margin: 'auto', paddingLeft: 50, paddingRight: 50, marginBottom: 20, marginTop: 10}
 
 export default VirtualBackground;
